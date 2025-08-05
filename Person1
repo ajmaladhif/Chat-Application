@@ -1,0 +1,88 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.net.*;
+
+public class person1 extends Frame implements ActionListener, Runnable {
+
+    TextField textField;
+    TextArea textArea;
+    Button send;
+    ServerSocket serverSocket;
+    Socket socket;
+    DataInputStream dataInputStream;
+    DataOutputStream dataOutputStream;
+    Thread chat;
+
+    person1() {
+        textArea = new TextArea();
+        textField = new TextField();
+        send = new Button("Send");
+
+        setLayout(null);
+
+        textArea.setBounds(50, 50, 400, 300);
+        textField.setBounds(50, 370, 300, 30);
+        send.setBounds(360, 370, 80, 30);
+
+        add(textArea);
+        add(textField);
+        add(send);
+
+        send.setEnabled(false);
+        send.addActionListener(this);
+
+        setSize(500, 500);
+        setTitle("User1");
+        setVisible(true);
+
+        new Thread(() -> {
+            try {
+                textArea.append("Waiting for person2 to connect...\n");
+                serverSocket = new ServerSocket(9000);
+                socket = serverSocket.accept();
+                textArea.append("Person2 connected!\n");
+
+                dataInputStream = new DataInputStream(socket.getInputStream());
+                dataOutputStream = new DataOutputStream(socket.getOutputStream());
+
+                send.setEnabled(true); // enable send button
+                chat = new Thread(this);
+                chat.start();
+            } catch (Exception ex) {
+                textArea.append("Connection Error: " + ex + "\n");
+            }
+        }).start();
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        String msg = textField.getText().trim();
+        if (msg.isEmpty()) return;
+
+        textArea.append("Person1: " + msg + "\n");
+        textField.setText("");
+
+        try {
+            dataOutputStream.writeUTF(msg);
+            dataOutputStream.flush();
+        } catch (IOException ex) {
+            textArea.append("Send Error: " + ex + "\n");
+        }
+    }
+
+    public void run() {
+        while (true) {
+            try {
+                String msg = dataInputStream.readUTF();
+                textArea.append("Person2: " + msg + "\n");
+            } catch (Exception ex) {
+                textArea.append("Receive Error: " + ex + "\n");
+                break;
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        new person1();
+    }
+}
