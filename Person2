@@ -1,0 +1,77 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.net.*;
+
+public class person2 extends Frame implements ActionListener, Runnable {
+
+    TextField textField;
+    TextArea textArea;
+    Button send;
+    Socket socket;
+    DataInputStream dataInputStream;
+    DataOutputStream dataOutputStream;
+    Thread chat;
+
+    person2() {
+        textArea = new TextArea();
+        textField = new TextField();
+        send = new Button("Send");
+
+        setLayout(null);
+
+        textArea.setBounds(50, 50, 400, 300);
+        textField.setBounds(50, 370, 300, 30);
+        send.setBounds(360, 370, 80, 30);
+
+        add(textArea);
+        add(textField);
+        add(send);
+
+        send.addActionListener(this);
+
+        setSize(500, 500);
+        setTitle("User2");
+        setVisible(true);
+
+        try {
+            socket = new Socket("localhost", 9000);
+            dataInputStream = new DataInputStream(socket.getInputStream());
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
+        } catch (Exception ex) {
+            System.out.println("Connection Error: " + ex);
+        }
+
+        chat = new Thread(this);
+        chat.start();
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        String msg = textField.getText();
+        textArea.append("Person2: " + msg + "\n");
+        textField.setText("");
+
+        try {
+            dataOutputStream.writeUTF(msg);
+            dataOutputStream.flush();
+        } catch (IOException ex) {
+            System.out.println("Send Error: " + ex);
+        }
+    }
+
+    public void run() {
+        while (true) {
+            try {
+                String msg = dataInputStream.readUTF();
+                textArea.append("Person1: " + msg + "\n");
+            } catch (Exception ex) {
+                System.out.println("Receive Error: " + ex);
+                break;
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        new person2();
+    }
+}
